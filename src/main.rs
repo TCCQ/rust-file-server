@@ -5,6 +5,10 @@ use std::error::Error;
 use std::io;
 use std::str::from_utf8;
 
+const HOST_ADDR: [u8;4] = [127, 0, 0, 1];
+const HOST_PORT: u32 = 3030;
+const PATH_PREFIX: &str = "/srv/static";
+
 // Returns either a path that was requested or the appropriate error
 // to send back to the client.
 fn parse_request_line(request_line: &str) -> Result<&str, &str>{
@@ -18,6 +22,7 @@ fn parse_request_line(request_line: &str) -> Result<&str, &str>{
         return Ok(path);
     }
 }
+
 
 async fn process_stream(mut stream:TcpStream) -> Result<(), Box<dyn Error>>{
     // try to parse a request and answer accordingly
@@ -41,7 +46,7 @@ async fn process_stream(mut stream:TcpStream) -> Result<(), Box<dyn Error>>{
                 match parse_request_line(request_line) {
                     Ok(path) => {
                         // we have the path now, and we know it's a GET request
-                        match fs::read(path).await {
+                        match fs::read(format!("{}{}", PATH_PREFIX, path)).await {
                             Err(_) => {
                                 // TODO better error responses
                                 return stream.write_all(b"HTTP/1.1 500 Couldn't get file contents\r\n\r\n")
@@ -77,15 +82,12 @@ async fn process_stream(mut stream:TcpStream) -> Result<(), Box<dyn Error>>{
     panic!();
 }
 
-const HOST_ADDR: [u8;4] = [127, 0, 0, 1];
-const HOST_PORT: u32 = 3030;
-
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let listener = TcpListener::bind(format!("{}.{}.{}.{}:{}", HOST_ADDR[0],
-                                             HOST_ADDR[0],
-                                             HOST_ADDR[0],
-                                             HOST_ADDR[0],
+                                             HOST_ADDR[1],
+                                             HOST_ADDR[2],
+                                             HOST_ADDR[3],
                                              HOST_PORT)).await?;
 
     loop {
